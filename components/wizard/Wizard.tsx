@@ -6,11 +6,9 @@ import { ThemeToggler } from "@/components/ThemeToggler";
 import { MovieCard } from "@/components/MovieCard";
 import { useLocale } from "@/components/LocaleProvider";
 import { AgeStep } from "@/components/wizard/AgeStep";
-import { CityStep } from "@/components/wizard/CityStep";
 import { CompanyStep } from "@/components/wizard/CompanyStep";
-import { CountryStep } from "@/components/wizard/CountryStep";
 import { GenderStep } from "@/components/wizard/GenderStep";
-import { LocationModeStep } from "@/components/wizard/LocationModeStep";
+import { LocationStep } from "@/components/wizard/LocationStep";
 import { MoodStep } from "@/components/wizard/MoodStep";
 import { StoryStep } from "@/components/wizard/StoryStep";
 import { WatchTimeStep } from "@/components/wizard/WatchTimeStep";
@@ -27,7 +25,6 @@ import type {
 const INITIAL_DATA: WizardData = {
   gender: null,
   age: null,
-  locationMode: "manual",
   country: "",
   city: "",
   latitude: null,
@@ -42,9 +39,7 @@ const INITIAL_DATA: WizardData = {
 type Step =
   | "gender"
   | "age"
-  | "locationMode"
-  | "country"
-  | "city"
+  | "location"
   | "mood"
   | "story"
   | "watchTime"
@@ -53,13 +48,8 @@ type Step =
 
 type Direction = "forward" | "back";
 
-function buildStepPath(data: WizardData): Step[] {
-  const path: Step[] = ["gender", "age", "locationMode"];
-  if (data.locationMode === "manual") {
-    path.push("country", "city");
-  }
-  path.push("mood", "story", "watchTime", "company");
-  return path;
+function buildStepPath(): Step[] {
+  return ["gender", "age", "location", "mood", "story", "watchTime", "company"];
 }
 
 export function Wizard() {
@@ -73,7 +63,7 @@ export function Wizard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const path = useMemo(() => buildStepPath(data), [data]);
+  const path = useMemo(() => buildStepPath(), []);
   const pathIndex = path.indexOf(step);
   const progress =
     step === "results"
@@ -94,9 +84,8 @@ export function Wizard() {
   function goNext(from: Step, patch?: Partial<WizardData>) {
     const nextData = patch ? { ...data, ...patch } : data;
     if (patch) setData(nextData);
-    const nextPath = buildStepPath(nextData);
-    const idx = nextPath.indexOf(from);
-    const next = nextPath[idx + 1];
+    const idx = path.indexOf(from);
+    const next = path[idx + 1];
     if (next) goTo(next, "forward");
   }
 
@@ -224,33 +213,11 @@ export function Wizard() {
               />
             ) : null}
 
-            {step === "locationMode" ? (
-              <LocationModeStep
+            {step === "location" ? (
+              <LocationStep
                 data={data}
                 onChange={patchData}
-                onManual={() =>
-                  goNext("locationMode", { locationMode: "manual" })
-                }
-                onLocated={() =>
-                  goNext("locationMode", { locationMode: "current" })
-                }
-              />
-            ) : null}
-
-            {step === "country" ? (
-              <CountryStep
-                country={data.country}
-                onSelect={(country) =>
-                  goNext("country", { country, city: "" })
-                }
-              />
-            ) : null}
-
-            {step === "city" ? (
-              <CityStep
-                country={data.country}
-                city={data.city}
-                onSelect={(city) => goNext("city", { city })}
+                onDone={() => goNext("location")}
               />
             ) : null}
 

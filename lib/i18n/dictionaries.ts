@@ -72,6 +72,9 @@ export type Dictionary = {
   somethingWrong: string;
   geoNotSupported: string;
   geoDenied: string;
+  searchCountry: string;
+  locationSearchSub: string;
+  noCountryFound: string;
   moviePosterAlt: string;
   langFa: string;
   langEn: string;
@@ -153,6 +156,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
     geoNotSupported: "موقعیت‌یابی در این مرورگر پشتیبانی نمی‌شود.",
     geoDenied:
       "دسترسی به موقعیت ممکن نشد. لطفاً کشور و شهر را انتخاب کن.",
+    searchCountry: "جستجوی کشور…",
+    locationSearchSub: "کشورت را از لیست انتخاب کن یا جستجو کن.",
+    noCountryFound: "کشوری یافت نشد.",
     moviePosterAlt: "پوستر {title}",
     langFa: "فارسی",
     langEn: "English",
@@ -258,6 +264,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
     geoNotSupported: "Geolocation is not supported in this browser.",
     geoDenied:
       "Could not access your location. Please select country and city.",
+    searchCountry: "Search country…",
+    locationSearchSub: "Pick your country from the list or search for it.",
+    noCountryFound: "No country found.",
     moviePosterAlt: "{title} poster",
     langFa: "فارسی",
     langEn: "English",

@@ -18,12 +18,9 @@ export type Company =
   | "partner"
   | "colleagues";
 
-export type LocationMode = "manual" | "current";
-
 export interface WizardData {
   gender: Gender | null;
   age: number | null;
-  locationMode: LocationMode;
   country: string;
   city: string;
   latitude: number | null;
