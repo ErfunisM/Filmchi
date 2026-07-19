@@ -8,6 +8,12 @@ function buildPrompt(data: RecommendRequest): string {
     [data.city, data.country].filter(Boolean).join(", ") ||
     "unspecified";
 
+  const isFarsi = data.locale === "fa";
+
+  const reasonInstruction = isFarsi
+    ? 'یک جمله کوتاه به زبان فارسی که توضیح می‌دهد چرا این فیلم مناسب است'
+    : "One short sentence in English explaining why this fits";
+
   return `You are a movie recommendation expert. Suggest exactly 5 movies based on this viewer profile.
 
 Viewer profile:
@@ -24,6 +30,7 @@ Rules:
 - Prefer well-known, widely available films
 - Match the mood, company, and time of day
 - Return ONLY valid JSON, no markdown, no commentary
+- The "reason" field must be: ${reasonInstruction}
 - Schema:
 {
   "movies": [
@@ -31,7 +38,7 @@ Rules:
       "title": "Movie Title",
       "year": 2010,
       "imdbRating": 8.1,
-      "reason": "One short sentence why this fits"
+      "reason": "..."
     }
   ]
 }

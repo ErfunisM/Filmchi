@@ -20,8 +20,12 @@ export function MovieCard({
   onNext,
   onRestart,
 }: MovieCardProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const isLast = index >= total - 1;
+
+  // Pick the right overview based on current locale; fall back to English if Persian is unavailable
+  const overview =
+    locale === "fa" ? (movie.overviewFa || movie.overview) : movie.overview;
 
   return (
     <section className="movie-reveal">
@@ -50,17 +54,14 @@ export function MovieCard({
             total,
           })}
         </p>
-        <h2 className="movie-title">{movie.title}</h2>
-        <p className="movie-meta">
-          {movie.year}
-          {movie.imdbRating ? ` · IMDb ${movie.imdbRating.toFixed(1)}` : ""}
-          {movie.voteAverage
-            ? ` · TMDB ${movie.voteAverage.toFixed(1)}`
-            : ""}
+        <h2 className="movie-title" dir="ltr">{movie.title}</h2>
+        <p className="movie-meta" dir="ltr">
+          {movie.imdbRating ? <span>IMDb {movie.imdbRating.toFixed(1)}</span> : null}
+          <span>{movie.imdbRating ? " · " : ""}{movie.year}</span>
+          {movie.runtime ? <span> · {movie.runtime} min</span> : null}
         </p>
-        <p className="movie-reason">{movie.reason}</p>
-        {movie.overview ? (
-          <p className="movie-overview">{movie.overview}</p>
+        {overview ? (
+          <p className="movie-overview">{overview}</p>
         ) : null}
 
         <div className="step-actions">

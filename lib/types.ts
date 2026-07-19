@@ -47,6 +47,7 @@ export interface RecommendRequest {
   story?: string;
   watchTime: WatchTime;
   company: Company;
+  locale?: "en" | "fa";
 }
 
 export interface AiMovie {
@@ -60,6 +61,8 @@ export interface SuggestedMovie extends AiMovie {
   tmdbId: number | null;
   posterUrl: string | null;
   overview: string | null;
+  overviewFa: string | null;
+  runtime: number | null;
   voteAverage: number | null;
 }
 

@@ -63,7 +63,7 @@ function buildStepPath(data: WizardData): Step[] {
 }
 
 export function Wizard() {
-  const { t, dir } = useLocale();
+  const { t, dir, locale } = useLocale();
   const [step, setStep] = useState<Step>("gender");
   const [direction, setDirection] = useState<Direction>("forward");
   const [animKey, setAnimKey] = useState(0);
@@ -136,6 +136,7 @@ export function Wizard() {
           story: data.story,
           watchTime: data.watchTime,
           company: data.company,
+          locale,
         }),
       });
 

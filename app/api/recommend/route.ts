@@ -83,6 +83,7 @@ function parseBody(body: unknown): RecommendRequest {
     story: typeof data.story === "string" ? data.story : "",
     watchTime: data.watchTime,
     company: data.company,
+    locale: data.locale === "fa" ? "fa" : "en",
   };
 }
 
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
     const json = await request.json();
     const payload = parseBody(json);
     const movies = await suggestMovies(payload);
-    const enriched = await enrichMovies(movies);
+    const enriched = await enrichMovies(movies, payload.locale);
 
     return NextResponse.json({ movies: enriched });
   } catch (error) {
