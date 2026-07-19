@@ -16,6 +16,10 @@ interface TmdbSearchResponse {
   results?: TmdbSearchResult[];
 }
 
+interface TmdbMovieDetails {
+  runtime?: number | null;
+}
+
 function scoreMatch(candidate: TmdbSearchResult, movie: AiMovie): number {
   const candidateYear = candidate.release_date
     ? Number(candidate.release_date.slice(0, 4))
@@ -34,12 +38,14 @@ function scoreMatch(candidate: TmdbSearchResult, movie: AiMovie): number {
 async function searchMovie(
   movie: AiMovie,
   apiKey: string,
+  language: string,
 ): Promise<TmdbSearchResult | null> {
   const url = new URL(`${TMDB_BASE}/search/movie`);
   url.searchParams.set("api_key", apiKey);
   url.searchParams.set("query", movie.title);
   url.searchParams.set("include_adult", "false");
   url.searchParams.set("year", String(movie.year));
+  url.searchParams.set("language", language);
 
   const response = await fetch(url.toString(), { next: { revalidate: 3600 } });
   if (!response.ok) {
@@ -54,6 +60,7 @@ async function searchMovie(
     fallbackUrl.searchParams.set("api_key", apiKey);
     fallbackUrl.searchParams.set("query", movie.title);
     fallbackUrl.searchParams.set("include_adult", "false");
+    fallbackUrl.searchParams.set("language", language);
 
     const fallbackResponse = await fetch(fallbackUrl.toString(), {
       next: { revalidate: 3600 },
@@ -72,37 +79,70 @@ async function searchMovie(
   )[0];
 }
 
+async function fetchRuntime(
+  tmdbId: number,
+  apiKey: string,
+): Promise<number | null> {
+  const url = new URL(`${TMDB_BASE}/movie/${tmdbId}`);
+  url.searchParams.set("api_key", apiKey);
+
+  const response = await fetch(url.toString(), { next: { revalidate: 3600 } });
+  if (!response.ok) return null;
+
+  const data = (await response.json()) as TmdbMovieDetails;
+  return typeof data.runtime === "number" && data.runtime > 0
+    ? data.runtime
+    : null;
+}
+
 export async function enrichMovies(
   movies: AiMovie[],
+  locale: "en" | "fa" = "en",
 ): Promise<SuggestedMovie[]> {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     throw new Error("TMDB_API_KEY is not configured");
   }
 
+  // locale param kept for future use (e.g. reason language via nararouter)
+  void locale;
+
   const enriched = await Promise.all(
     movies.map(async (movie) => {
       try {
-        const match = await searchMovie(movie, apiKey);
-        if (!match) {
+        // Always fetch English for poster + base data
+        const enMatch = await searchMovie(movie, apiKey, "en-US");
+
+        if (!enMatch) {
           return {
             ...movie,
             tmdbId: null,
             posterUrl: null,
             overview: null,
+            overviewFa: null,
+            runtime: null,
             voteAverage: null,
           } satisfies SuggestedMovie;
         }
 
+        // Fetch Persian overview and runtime in parallel
+        const [faMatch, runtime] = await Promise.all([
+          searchMovie(movie, apiKey, "fa-IR"),
+          fetchRuntime(enMatch.id, apiKey),
+        ]);
+        const overviewFa = faMatch?.overview || null;
+
         return {
           ...movie,
-          tmdbId: match.id,
-          posterUrl: match.poster_path
-            ? `${TMDB_IMAGE_BASE}${match.poster_path}`
+          tmdbId: enMatch.id,
+          posterUrl: enMatch.poster_path
+            ? `${TMDB_IMAGE_BASE}${enMatch.poster_path}`
             : null,
-          overview: match.overview || null,
+          overview: enMatch.overview || null,
+          overviewFa,
+          runtime,
           voteAverage:
-            typeof match.vote_average === "number" ? match.vote_average : null,
+            typeof enMatch.vote_average === "number" ? enMatch.vote_average : null,
         } satisfies SuggestedMovie;
       } catch {
         return {
@@ -110,6 +150,8 @@ export async function enrichMovies(
           tmdbId: null,
           posterUrl: null,
           overview: null,
+          overviewFa: null,
+          runtime: null,
           voteAverage: null,
         } satisfies SuggestedMovie;
       }
