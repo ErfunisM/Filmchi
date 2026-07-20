@@ -643,6 +643,61 @@ input[type="number"].text-input::-webkit-inner-spin-button {
   letter-spacing: 0.04em;
 }
 
+/* Results tab bar */
+.results-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.25rem;
+}
+
+.results-tab {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--cream-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.results-tab--active {
+  color: var(--amber);
+  border-bottom-color: var(--amber);
+  font-weight: 600;
+}
+
+/* Watched button inside MovieCard */
+.watched-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: none;
+  color: var(--cream-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.watched-btn:hover:not(:disabled) {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.watched-btn--done {
+  color: var(--amber);
+  border-color: var(--amber);
+  opacity: 0.75;
+  cursor: default;
+}
+
 .step-actions {
   display: flex;
   flex-wrap: wrap;

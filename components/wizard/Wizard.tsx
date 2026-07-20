@@ -12,6 +12,7 @@ import { LocationStep } from "@/components/wizard/LocationStep";
 import { MoodStep } from "@/components/wizard/MoodStep";
 import { StoryStep } from "@/components/wizard/StoryStep";
 import { WatchTimeStep } from "@/components/wizard/WatchTimeStep";
+import { getWatchedMovies, getWatchedTitles } from "@/lib/watchedMovies";
 import type {
   Company,
   Gender,
@@ -63,6 +64,15 @@ export function Wizard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // "new" = new picks tab, "watched" = previously watched tab
+  const [resultsTab, setResultsTab] = useState<"new" | "watched">("new");
+  // relevantWatched: only the watched films the AI confirmed match the current profile
+  const [relevantWatched, setRelevantWatched] = useState<SuggestedMovie[]>([]);
+  const [watchedIndex, setWatchedIndex] = useState(0);
+
+  // No longer need to load full watched list on step change — API returns the filtered subset
+  const watchedMovies = relevantWatched;
+
   const path = useMemo(() => buildStepPath(), []);
   const pathIndex = path.indexOf(step);
   const progress =
@@ -110,6 +120,7 @@ export function Wizard() {
     setError(null);
 
     try {
+    const currentWatched = getWatchedMovies();
       const response = await fetch("/api/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,6 +137,8 @@ export function Wizard() {
           watchTime: data.watchTime,
           company: data.company,
           locale,
+          seenTitles: currentWatched.map((w) => w.title),
+          watchedMoviesData: currentWatched,
         }),
       });
 
@@ -143,6 +156,9 @@ export function Wizard() {
 
       setMovies(json.movies);
       setMovieIndex(0);
+      setRelevantWatched(json.relevantWatched ?? []);
+      setWatchedIndex(0);
+      setResultsTab("new");
       goTo("results", "forward");
     } catch (err) {
       setError(err instanceof Error ? err.message : t.somethingWrong);
@@ -155,10 +171,18 @@ export function Wizard() {
     setData(INITIAL_DATA);
     setMovies([]);
     setMovieIndex(0);
+    setRelevantWatched([]);
+    setWatchedIndex(0);
+    setResultsTab("new");
     setError(null);
     setDirection("back");
     setAnimKey((k) => k + 1);
     setStep("gender");
+  }
+
+  // Called from MovieCard when user marks a film as watched
+  function handleMarkedWatched() {
+    // No need to reload — relevantWatched is set by API, not localStorage directly
   }
 
   const slideClass =
@@ -256,15 +280,48 @@ export function Wizard() {
 
         {step === "results" && movies[movieIndex] ? (
           <div key={`results-${animKey}`} className={`step-stage ${slideClass}`}>
-            <MovieCard
-              movie={movies[movieIndex]}
-              index={movieIndex}
-              total={movies.length}
-              onNext={() =>
-                setMovieIndex((i) => Math.min(i + 1, movies.length - 1))
-              }
-              onRestart={restart}
-            />
+            {/* Tab bar — only shown when there are watched movies */}
+            {watchedMovies.length > 0 ? (
+              <div className="results-tabs">
+                <button
+                  type="button"
+                  className={`results-tab ${resultsTab === "new" ? "results-tab--active" : ""}`}
+                  onClick={() => { setResultsTab("new"); setMovieIndex(0); }}
+                >
+                  {t.newResults}
+                </button>
+                <button
+                  type="button"
+                  className={`results-tab ${resultsTab === "watched" ? "results-tab--active" : ""}`}
+                  onClick={() => { setResultsTab("watched"); setWatchedIndex(0); }}
+                >
+                  {t.watchedResults}
+                </button>
+              </div>
+            ) : null}
+
+            {resultsTab === "new" ? (
+              <MovieCard
+                movie={movies[movieIndex]}
+                index={movieIndex}
+                total={movies.length}
+                onNext={() =>
+                  setMovieIndex((i) => Math.min(i + 1, movies.length - 1))
+                }
+                onRestart={restart}
+                onMarkedWatched={handleMarkedWatched}
+              />
+            ) : (
+              <MovieCard
+                movie={watchedMovies[watchedIndex] as unknown as SuggestedMovie}
+                index={watchedIndex}
+                total={watchedMovies.length}
+                onNext={() =>
+                  setWatchedIndex((i) => Math.min(i + 1, watchedMovies.length - 1))
+                }
+                onRestart={restart}
+              />
+            )}
           </div>
         ) : null}
 

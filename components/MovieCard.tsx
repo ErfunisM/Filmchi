@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useLocale } from "@/components/LocaleProvider";
 import { formatMessage } from "@/lib/i18n/dictionaries";
+import { addWatchedMovie, isWatched } from "@/lib/watchedMovies";
 import type { SuggestedMovie } from "@/lib/types";
 
 interface MovieCardProps {
@@ -11,6 +13,7 @@ interface MovieCardProps {
   total: number;
   onNext: () => void;
   onRestart: () => void;
+  onMarkedWatched?: (movie: SuggestedMovie) => void;
 }
 
 export function MovieCard({
@@ -19,13 +22,25 @@ export function MovieCard({
   total,
   onNext,
   onRestart,
+  onMarkedWatched,
 }: MovieCardProps) {
   const { t, locale } = useLocale();
   const isLast = index >= total - 1;
+  const [watched, setWatched] = useState(false);
 
-  // Pick the right overview based on current locale; fall back to English if Persian is unavailable
+  // Sync watched state when movie changes
+  useEffect(() => {
+    setWatched(isWatched(movie.title));
+  }, [movie.title]);
+
   const overview =
     locale === "fa" ? (movie.overviewFa || movie.overview) : movie.overview;
+
+  function handleMarkWatched() {
+    addWatchedMovie(movie);
+    setWatched(true);
+    onMarkedWatched?.(movie);
+  }
 
   return (
     <section className="movie-reveal">
@@ -63,6 +78,16 @@ export function MovieCard({
         {overview ? (
           <p className="movie-overview">{overview}</p>
         ) : null}
+
+        {/* Mark as watched */}
+        <button
+          type="button"
+          className={`watched-btn ${watched ? "watched-btn--done" : ""}`}
+          onClick={handleMarkWatched}
+          disabled={watched}
+        >
+          {watched ? t.alreadyWatched : t.markWatched}
+        </button>
 
         <div className="step-actions">
           <button type="button" className="ghost-btn" onClick={onRestart}>

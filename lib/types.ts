@@ -45,6 +45,7 @@ export interface RecommendRequest {
   watchTime: WatchTime;
   company: Company;
   locale?: "en" | "fa";
+  seenTitles?: string[];
 }
 
 export interface AiMovie {
@@ -65,4 +66,5 @@ export interface SuggestedMovie extends AiMovie {
 
 export interface RecommendResponse {
   movies: SuggestedMovie[];
+  relevantWatched: SuggestedMovie[];
 }

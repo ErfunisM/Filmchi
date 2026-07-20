@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { NaraRouterError, suggestMovies } from "@/lib/nararouter";
+import { NaraRouterError, suggestMovies, filterRelevantWatched } from "@/lib/nararouter";
 import { enrichMovies } from "@/lib/tmdb";
 import type {
   Company,
@@ -84,6 +84,11 @@ function parseBody(body: unknown): RecommendRequest {
     watchTime: data.watchTime,
     company: data.company,
     locale: data.locale === "fa" ? "fa" : "en",
+    seenTitles: Array.isArray(data.seenTitles)
+      ? (data.seenTitles as unknown[])
+          .filter((t): t is string => typeof t === "string")
+          .slice(0, 50)
+      : [],
   };
 }
 
@@ -91,10 +96,45 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const payload = parseBody(json);
-    const movies = await suggestMovies(payload);
+
+    // Run suggest + watched-filter in parallel
+    const seenTitles = payload.seenTitles ?? [];
+    const [movies, relevantTitles] = await Promise.all([
+      suggestMovies(payload),
+      filterRelevantWatched(payload, seenTitles),
+    ]);
+
     const enriched = await enrichMovies(movies, payload.locale);
 
-    return NextResponse.json({ movies: enriched });
+    // Build relevantWatched from the raw watched data sent by client
+    // Client sends watchedMoviesData alongside seenTitles for this purpose
+    const rawWatched = Array.isArray((json as Record<string, unknown>).watchedMoviesData)
+      ? (json as Record<string, unknown>).watchedMoviesData as Record<string, unknown>[]
+      : [];
+
+    const relevantWatched = relevantTitles
+      .map((title) =>
+        rawWatched.find(
+          (w) =>
+            typeof w.title === "string" &&
+            w.title.toLowerCase() === title.toLowerCase(),
+        ),
+      )
+      .filter((w): w is Record<string, unknown> => w !== undefined)
+      .map((w) => ({
+        title: String(w.title ?? ""),
+        year: Number(w.year ?? 0),
+        imdbRating: Number(w.imdbRating ?? 0),
+        reason: String(w.reason ?? ""),
+        tmdbId: null,
+        posterUrl: typeof w.posterUrl === "string" ? w.posterUrl : null,
+        overview: typeof w.overview === "string" ? w.overview : null,
+        overviewFa: typeof w.overviewFa === "string" ? w.overviewFa : null,
+        runtime: typeof w.runtime === "number" ? w.runtime : null,
+        voteAverage: null,
+      }));
+
+    return NextResponse.json({ movies: enriched, relevantWatched });
   } catch (error) {
     if (error instanceof NaraRouterError) {
       return NextResponse.json(

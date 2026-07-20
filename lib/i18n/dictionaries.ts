@@ -75,6 +75,10 @@ export type Dictionary = {
   searchCountry: string;
   locationSearchSub: string;
   noCountryFound: string;
+  markWatched: string;
+  alreadyWatched: string;
+  newResults: string;
+  watchedResults: string;
   moviePosterAlt: string;
   langFa: string;
   langEn: string;
@@ -159,6 +163,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
     searchCountry: "جستجوی کشور…",
     locationSearchSub: "کشورت را از لیست انتخاب کن یا جستجو کن.",
     noCountryFound: "کشوری یافت نشد.",
+    markWatched: "قبلاً این فیلم رو دیدم",
+    alreadyWatched: "دیده شده ✓",
+    newResults: "نتایج جدید",
+    watchedResults: "فیلم‌هایی که دیدی",
     moviePosterAlt: "پوستر {title}",
     langFa: "فارسی",
     langEn: "English",
@@ -267,6 +275,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
     searchCountry: "Search country…",
     locationSearchSub: "Pick your country from the list or search for it.",
     noCountryFound: "No country found.",
+    markWatched: "I've already seen this",
+    alreadyWatched: "Watched ✓",
+    newResults: "New picks",
+    watchedResults: "Movies you've seen",
     moviePosterAlt: "{title} poster",
     langFa: "فارسی",
     langEn: "English",

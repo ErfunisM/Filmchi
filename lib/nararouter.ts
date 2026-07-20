@@ -14,6 +14,11 @@ function buildPrompt(data: RecommendRequest): string {
     ? 'یک جمله کوتاه به زبان فارسی که توضیح می‌دهد چرا این فیلم مناسب است'
     : "One short sentence in English explaining why this fits";
 
+  const seenSection =
+    data.seenTitles && data.seenTitles.length > 0
+      ? `\n- Movies already seen (DO NOT suggest these): ${data.seenTitles.join(", ")}`
+      : "";
+
   return `You are a movie recommendation expert. Suggest exactly 5 movies based on this viewer profile.
 
 Viewer profile:
@@ -23,7 +28,7 @@ Viewer profile:
 - Current mood: ${data.mood}
 - Mood/story details: ${data.story?.trim() || "none provided"}
 - Preferred watch time: ${data.watchTime}
-- Watching with: ${data.company}
+- Watching with: ${data.company}${seenSection}
 
 Rules:
 - Only suggest movies with IMDb rating of 7.0 or higher
@@ -166,6 +171,79 @@ function mapHttpError(status: number, errorText: string): NaraRouterError {
     apiMessage || `NaraRouter request failed (${status}).`,
     status >= 400 && status < 600 ? status : 502,
   );
+}
+
+function buildFilterPrompt(data: RecommendRequest, candidateTitles: string[]): string {
+  const location =
+    data.locationLabel ||
+    [data.city, data.country].filter(Boolean).join(", ") ||
+    "unspecified";
+
+  return `You are a movie expert. A viewer with this profile:
+- Gender: ${data.gender}
+- Age: ${data.age}
+- Location: ${location}
+- Current mood: ${data.mood}
+- Mood/story details: ${data.story?.trim() || "none provided"}
+- Watch time: ${data.watchTime}
+- Watching with: ${data.company}
+
+From this list of movies they have already watched, pick ONLY the ones that are a good match for their current profile. Return an empty array if none match.
+
+Candidate titles: ${candidateTitles.join(", ")}
+
+Return ONLY valid JSON, no markdown, no commentary:
+{ "titles": ["Title One", "Title Two"] }`;
+}
+
+export async function filterRelevantWatched(
+  data: RecommendRequest,
+  candidateTitles: string[],
+): Promise<string[]> {
+  if (candidateTitles.length === 0) return [];
+
+  const apiKey = process.env.NARAROUTER_API_KEY;
+  const model = process.env.NARAROUTER_MODEL || "tencent-hy3";
+  if (!apiKey) return [];
+
+  try {
+    const response = await fetch(NARAROUTER_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey.trim()}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "system",
+            content: "You are a movie expert. Always respond with valid JSON only.",
+          },
+          { role: "user", content: buildFilterPrompt(data, candidateTitles) },
+        ],
+      }),
+    });
+
+    if (!response.ok) return [];
+
+    const json = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = json.choices?.[0]?.message?.content;
+    if (!content) return [];
+
+    const parsed = extractJson(content) as { titles?: unknown };
+    if (!Array.isArray(parsed.titles)) return [];
+
+    return parsed.titles
+      .filter((t): t is string => typeof t === "string")
+      .filter((t) =>
+        candidateTitles.some((c) => c.toLowerCase() === t.toLowerCase()),
+      );
+  } catch {
+    return [];
+  }
 }
 
 export async function suggestMovies(data: RecommendRequest): Promise<AiMovie[]> {
