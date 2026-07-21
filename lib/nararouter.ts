@@ -1,4 +1,4 @@
-import type { AiMovie, RecommendRequest } from "./types";
+import type { AiMovie, CandidateWatchedMovie, RecommendRequest } from "./types";
 
 const NARAROUTER_URL = "https://router.bynara.id/v1/chat/completions";
 
@@ -19,22 +19,27 @@ function buildPrompt(data: RecommendRequest): string {
       ? `\n- Movies already seen (DO NOT suggest these): ${data.seenTitles.join(", ")}`
       : "";
 
-  return `You are a movie recommendation expert. Suggest exactly 5 movies based on this viewer profile.
+  const storyHint = data.story?.trim();
+  const hasSpecificRequest = storyHint && storyHint.length > 5;
+
+  return `You are a movie recommendation expert. Suggest between 1 and 5 movies based on this viewer profile.
 
 Viewer profile:
 - Gender: ${data.gender}
 - Age: ${data.age}
 - Location: ${location}
 - Current mood: ${data.mood}
-- Mood/story details: ${data.story?.trim() || "none provided"}
+- Mood/story details: ${storyHint || "none provided"}
 - Preferred watch time: ${data.watchTime}
 - Watching with: ${data.company}${seenSection}
 
 Rules:
-- Only suggest movies with IMDb rating of 7.0 or higher
+- Prefer movies with IMDb rating of 7.0 or higher. If the request is very specific (e.g. a particular actor, director, or niche genre), you may include movies with IMDb rating as low as 6.5 — but only if they genuinely fit.
 - Prefer well-known, widely available films
-- Match the mood, company, and time of day
+- Match the mood, company, time of day, and the story/theme details closely
+- If the viewer requests a specific actor, director, or theme: prioritize those over generic suggestions
 - Return ONLY valid JSON, no markdown, no commentary
+- Return as many movies as you can (up to 5). If you can only find 1-4 strong matches, return those — do NOT pad the list with irrelevant movies just to reach 5
 - The "reason" field must be: ${reasonInstruction}
 - Schema:
 {
@@ -47,7 +52,7 @@ Rules:
     }
   ]
 }
-Exactly 5 movies in the array.`;
+Between 1 and 5 movies in the array. Quality over quantity.${hasSpecificRequest ? "\n\nIMPORTANT: The viewer has a specific request in the story details. Honor it strictly." : ""}`;
 }
 
 function extractJson(text: string): unknown {
@@ -92,11 +97,12 @@ function normalizeMovies(payload: unknown): AiMovie[] {
       } satisfies AiMovie;
     })
     .filter((movie): movie is AiMovie => movie !== null)
-    .filter((movie) => movie.imdbRating >= 7)
+    // Accept 6.5+ to handle niche/actor-specific requests; quality still maintained
+    .filter((movie) => movie.imdbRating >= 6.5)
     .slice(0, 5);
 
-  if (normalized.length < 5) {
-    throw new Error("NaraRouter returned fewer than 5 valid movies");
+  if (normalized.length < 1) {
+    throw new Error("NaraRouter returned no valid movies");
   }
 
   return normalized;
@@ -173,34 +179,90 @@ function mapHttpError(status: number, errorText: string): NaraRouterError {
   );
 }
 
-function buildFilterPrompt(data: RecommendRequest, candidateTitles: string[]): string {
+function buildFilterPrompt(
+  data: RecommendRequest,
+  candidates: CandidateWatchedMovie[],
+): string {
   const location =
     data.locationLabel ||
     [data.city, data.country].filter(Boolean).join(", ") ||
     "unspecified";
 
-  return `You are a movie expert. A viewer with this profile:
+  const formattedCandidates = candidates
+    .map((c, i) => {
+      const yearStr = c.year ? ` (${c.year})` : "";
+      const genreStr =
+        c.genres && c.genres.length > 0
+          ? `\n   TMDB Genres: ${c.genres.join(", ")}`
+          : "";
+      const desc = c.overview || c.overviewFa || c.reason || "";
+      const descStr = desc ? `\n   Description: ${desc.slice(0, 200)}` : "";
+      return `${i + 1}. Title: "${c.title}"${yearStr}${genreStr}${descStr}`;
+    })
+    .join("\n\n");
+
+  const storyText = data.story?.trim();
+
+  return `You are a strict movie genre and content filter.
+
+User Request & Profile:
 - Gender: ${data.gender}
-- Age: ${data.age}
+- Age: ${data.age} years old
 - Location: ${location}
-- Current mood: ${data.mood}
-- Mood/story details: ${data.story?.trim() || "none provided"}
-- Watch time: ${data.watchTime}
-- Watching with: ${data.company}
+- Selected Mood: ${data.mood}
+- Story / User Desired Theme: ${storyText || "Not specified"}
+- Watch Time: ${data.watchTime}
+- Company: ${data.company}
 
-From this list of movies they have already watched, pick ONLY the ones that are a good match for their current profile. Return an empty array if none match.
+Your Task:
+Filter the candidate movies below (which the user previously marked as watched). Return ONLY candidate movies that strictly match ALL of the following criteria.
+Each candidate includes its REAL genres from TMDB — use them as the primary signal.
 
-Candidate titles: ${candidateTitles.join(", ")}
+STRICT FILTERING RULES:
+
+1. GENRE & MOOD COMPATIBILITY IS MANDATORY (use TMDB Genres as the primary signal):
+   - Mood 'thrill' OR story mentions horror/scary/thriller/slasher/monster/zombie:
+     * INCLUDE: Horror, Thriller, Mystery genres ONLY.
+     * STRICTLY EXCLUDE: Animation, Family, Comedy, Music genres. Any movie tagged "Animation" or "Family" is automatically excluded.
+   - Mood 'happy' OR story mentions comedy/fun/feel-good:
+     * INCLUDE: Comedy, Family, Animation (lighthearted).
+     * EXCLUDE: Horror, Thriller, dark Drama.
+   - Mood 'romantic':
+     * INCLUDE: Romance genre. Can include Drama if romantic.
+     * EXCLUDE: Horror, pure Action without romance.
+   - Mood 'sad':
+     * INCLUDE: Drama (emotional/tragic).
+     * EXCLUDE: Comedy, Animation, upbeat Family films.
+   - Mood 'adventurous':
+     * INCLUDE: Adventure, Action, Science Fiction, Fantasy.
+   - Mood 'chill':
+     * INCLUDE: Comedy, Drama, Family, Music, Documentary.
+     * EXCLUDE: Horror, intense Thriller.
+   - Mood 'nostalgic':
+     * Include films that match the nostalgic feeling for this viewer's age group.
+   - Additionally, if 'Story / User Desired Theme' mentions a specific genre (e.g. sci-fi, anime, war, historical), candidates MUST have a matching TMDB genre. Non-matching genres are excluded.
+
+2. AGE APPROPRIATENESS IS MANDATORY:
+   - Age < 6 (toddler): ONLY G-rated family animation. EXCLUDE all adult, PG-13, R-rated, scary, or violent content.
+   - Age 6–11 (kids): ONLY kids/family-friendly (G, PG). EXCLUDE mature, scary, or adult content.
+   - Age ≥ 18: Do NOT include toddler/preschool cartoons unless the user explicitly asked for kids animated films.
+
+3. BE EXTREMELY SELECTIVE:
+   - For each candidate ask: "Given this user's current mood (${data.mood}), age (${data.age}), and desired theme, would they genuinely want to re-watch this movie right now?" If doubtful, EXCLUDE it.
+   - If NONE of the candidates match all rules, return an empty array.
+
+Candidate Movies:
+${formattedCandidates}
 
 Return ONLY valid JSON, no markdown, no commentary:
-{ "titles": ["Title One", "Title Two"] }`;
+{ "titles": ["Matching Title 1"] }`;
 }
 
 export async function filterRelevantWatched(
   data: RecommendRequest,
-  candidateTitles: string[],
+  candidates: CandidateWatchedMovie[],
 ): Promise<string[]> {
-  if (candidateTitles.length === 0) return [];
+  if (candidates.length === 0) return [];
 
   const apiKey = process.env.NARAROUTER_API_KEY;
   const model = process.env.NARAROUTER_MODEL || "tencent-hy3";
@@ -220,7 +282,7 @@ export async function filterRelevantWatched(
             role: "system",
             content: "You are a movie expert. Always respond with valid JSON only.",
           },
-          { role: "user", content: buildFilterPrompt(data, candidateTitles) },
+          { role: "user", content: buildFilterPrompt(data, candidates) },
         ],
       }),
     });
@@ -239,7 +301,7 @@ export async function filterRelevantWatched(
     return parsed.titles
       .filter((t): t is string => typeof t === "string")
       .filter((t) =>
-        candidateTitles.some((c) => c.toLowerCase() === t.toLowerCase()),
+        candidates.some((c) => c.title.toLowerCase() === t.toLowerCase()),
       );
   } catch {
     return [];

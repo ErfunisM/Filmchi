@@ -11,6 +11,7 @@ export interface WatchedMovie {
   overviewFa: string | null;
   runtime: number | null;
   reason: string;
+  genres: string[];
   savedAt: number; // timestamp
 }
 
@@ -43,6 +44,7 @@ export function addWatchedMovie(movie: SuggestedMovie): void {
     overviewFa: movie.overviewFa,
     runtime: movie.runtime,
     reason: movie.reason,
+    genres: Array.isArray(movie.genres) ? movie.genres : [],
     savedAt: Date.now(),
   };
 

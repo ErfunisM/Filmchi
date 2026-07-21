@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { NaraRouterError, suggestMovies, filterRelevantWatched } from "@/lib/nararouter";
 import { enrichMovies } from "@/lib/tmdb";
 import type {
+  CandidateWatchedMovie,
   Company,
   Gender,
   Mood,
@@ -97,21 +98,40 @@ export async function POST(request: Request) {
     const json = await request.json();
     const payload = parseBody(json);
 
+    const rawWatched = Array.isArray(
+      (json as Record<string, unknown>).watchedMoviesData,
+    )
+      ? ((json as Record<string, unknown>).watchedMoviesData as Record<
+          string,
+          unknown
+        >[])
+      : [];
+
+    const candidateWatched: CandidateWatchedMovie[] = rawWatched
+      .filter(
+        (w): w is Record<string, unknown> =>
+          Boolean(w && typeof w === "object" && typeof w.title === "string"),
+      )
+      .map((w) => ({
+        title: String(w.title).trim(),
+        year: typeof w.year === "number" ? w.year : undefined,
+        overview: typeof w.overview === "string" ? w.overview : null,
+        overviewFa: typeof w.overviewFa === "string" ? w.overviewFa : null,
+        reason: typeof w.reason === "string" ? w.reason : undefined,
+        genres: Array.isArray(w.genres)
+          ? (w.genres as unknown[]).filter((g): g is string => typeof g === "string")
+          : [],
+      }));
+
     // Run suggest + watched-filter in parallel
-    const seenTitles = payload.seenTitles ?? [];
     const [movies, relevantTitles] = await Promise.all([
       suggestMovies(payload),
-      filterRelevantWatched(payload, seenTitles),
+      filterRelevantWatched(payload, candidateWatched),
     ]);
 
     const enriched = await enrichMovies(movies, payload.locale);
 
-    // Build relevantWatched from the raw watched data sent by client
-    // Client sends watchedMoviesData alongside seenTitles for this purpose
-    const rawWatched = Array.isArray((json as Record<string, unknown>).watchedMoviesData)
-      ? (json as Record<string, unknown>).watchedMoviesData as Record<string, unknown>[]
-      : [];
-
+    // Build relevantWatched from rawWatched matched by title
     const relevantWatched = relevantTitles
       .map((title) =>
         rawWatched.find(
@@ -132,6 +152,9 @@ export async function POST(request: Request) {
         overviewFa: typeof w.overviewFa === "string" ? w.overviewFa : null,
         runtime: typeof w.runtime === "number" ? w.runtime : null,
         voteAverage: null,
+        genres: Array.isArray(w.genres)
+          ? (w.genres as unknown[]).filter((g): g is string => typeof g === "string")
+          : [],
       }));
 
     return NextResponse.json({ movies: enriched, relevantWatched });

@@ -62,9 +62,20 @@ export interface SuggestedMovie extends AiMovie {
   overviewFa: string | null;
   runtime: number | null;
   voteAverage: number | null;
+  genres: string[];
+}
+
+export interface CandidateWatchedMovie {
+  title: string;
+  year?: number;
+  overview?: string | null;
+  overviewFa?: string | null;
+  reason?: string;
+  genres?: string[];
 }
 
 export interface RecommendResponse {
   movies: SuggestedMovie[];
   relevantWatched: SuggestedMovie[];
 }
+

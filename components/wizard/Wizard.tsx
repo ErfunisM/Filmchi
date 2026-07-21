@@ -180,9 +180,15 @@ export function Wizard() {
     setStep("gender");
   }
 
-  // Called from MovieCard when user marks a film as watched
-  function handleMarkedWatched() {
-    // No need to reload — relevantWatched is set by API, not localStorage directly
+  // Called from MovieCard when user marks a film as watched in current session
+  function handleMarkedWatched(movie: SuggestedMovie) {
+    setRelevantWatched((prev) => {
+      const exists = prev.some(
+        (m) => m.title.toLowerCase() === movie.title.toLowerCase(),
+      );
+      if (exists) return prev;
+      return [...prev, movie];
+    });
   }
 
   const slideClass =

@@ -3,6 +3,29 @@ import type { AiMovie, SuggestedMovie } from "./types";
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w780";
 
+// TMDB genre ID → human-readable name mapping
+export const TMDB_GENRE_MAP: Record<number, string> = {
+  28: "Action",
+  12: "Adventure",
+  16: "Animation",
+  35: "Comedy",
+  80: "Crime",
+  99: "Documentary",
+  18: "Drama",
+  10751: "Family",
+  14: "Fantasy",
+  36: "History",
+  27: "Horror",
+  10402: "Music",
+  9648: "Mystery",
+  10749: "Romance",
+  878: "Science Fiction",
+  10770: "TV Movie",
+  53: "Thriller",
+  10752: "War",
+  37: "Western",
+};
+
 interface TmdbSearchResult {
   id: number;
   title: string;
@@ -10,6 +33,7 @@ interface TmdbSearchResult {
   poster_path?: string | null;
   overview?: string;
   vote_average?: number;
+  genre_ids?: number[];
 }
 
 interface TmdbSearchResponse {
@@ -18,6 +42,7 @@ interface TmdbSearchResponse {
 
 interface TmdbMovieDetails {
   runtime?: number | null;
+  genres?: Array<{ id: number; name: string }>;
 }
 
 function scoreMatch(candidate: TmdbSearchResult, movie: AiMovie): number {
@@ -79,20 +104,26 @@ async function searchMovie(
   )[0];
 }
 
-async function fetchRuntime(
+interface TmdbDetails {
+  runtime: number | null;
+  genres: string[];
+}
+
+async function fetchDetails(
   tmdbId: number,
   apiKey: string,
-): Promise<number | null> {
+): Promise<TmdbDetails> {
   const url = new URL(`${TMDB_BASE}/movie/${tmdbId}`);
   url.searchParams.set("api_key", apiKey);
 
   const response = await fetch(url.toString(), { next: { revalidate: 3600 } });
-  if (!response.ok) return null;
+  if (!response.ok) return { runtime: null, genres: [] };
 
   const data = (await response.json()) as TmdbMovieDetails;
-  return typeof data.runtime === "number" && data.runtime > 0
-    ? data.runtime
-    : null;
+  const runtime =
+    typeof data.runtime === "number" && data.runtime > 0 ? data.runtime : null;
+  const genres = (data.genres ?? []).map((g) => g.name);
+  return { runtime, genres };
 }
 
 export async function enrichMovies(
@@ -122,15 +153,24 @@ export async function enrichMovies(
             overviewFa: null,
             runtime: null,
             voteAverage: null,
+            genres: [],
           } satisfies SuggestedMovie;
         }
 
-        // Fetch Persian overview and runtime in parallel
-        const [faMatch, runtime] = await Promise.all([
+        // Fetch Persian overview, runtime, and genres in parallel
+        const [faMatch, details] = await Promise.all([
           searchMovie(movie, apiKey, "fa-IR"),
-          fetchRuntime(enMatch.id, apiKey),
+          fetchDetails(enMatch.id, apiKey),
         ]);
         const overviewFa = faMatch?.overview || null;
+
+        // Prefer genres from detailed endpoint; fall back to search result genre_ids
+        const genres =
+          details.genres.length > 0
+            ? details.genres
+            : (enMatch.genre_ids ?? []).map(
+                (id) => TMDB_GENRE_MAP[id] ?? String(id),
+              );
 
         return {
           ...movie,
@@ -140,9 +180,10 @@ export async function enrichMovies(
             : null,
           overview: enMatch.overview || null,
           overviewFa,
-          runtime,
+          runtime: details.runtime,
           voteAverage:
             typeof enMatch.vote_average === "number" ? enMatch.vote_average : null,
+          genres,
         } satisfies SuggestedMovie;
       } catch {
         return {
@@ -153,6 +194,7 @@ export async function enrichMovies(
           overviewFa: null,
           runtime: null,
           voteAverage: null,
+          genres: [],
         } satisfies SuggestedMovie;
       }
     }),
