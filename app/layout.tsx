@@ -16,7 +16,7 @@ const sans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Filmchi — پیشنهاد فیلم بر اساس حال‌وهوا",
+  title: "FilmChi",
   description:
     "به فیلمچی بگو حالت چطوره تا پنج فیلم عالی پیشنهاد بدهد.",
 };
