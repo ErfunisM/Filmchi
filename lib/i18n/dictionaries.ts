@@ -86,6 +86,9 @@ export type Dictionary = {
   themeLight: string;
   themeDark: string;
   countries: Record<string, string>;
+  ageWarningText: string;
+  ageWarningGoBack: string;
+  ageWarningContinue: string;
 };
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -173,6 +176,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
     theme: "تم",
     themeLight: "روشن",
     themeDark: "تیره",
+    ageWarningText: "برخی از فیلم‌های پیشنهادی ممکن است برای سن شما مناسب نباشند. آیا می‌خواهید ادامه دهید؟",
+    ageWarningGoBack: "بازگشت",
+    ageWarningContinue: "ادامه",
     countries: {
       "United States": "ایالات متحده",
       "United Kingdom": "بریتانیا",
@@ -285,6 +291,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
     theme: "Theme",
     themeLight: "Light",
     themeDark: "Dark",
+    ageWarningText: "Some of the suggested movies may not be suitable for your age. Do you want to continue?",
+    ageWarningGoBack: "Go back",
+    ageWarningContinue: "Continue",
     countries: {
       "United States": "United States",
       "United Kingdom": "United Kingdom",

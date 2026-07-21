@@ -6,12 +6,14 @@ import { ThemeToggler } from "@/components/ThemeToggler";
 import { MovieCard } from "@/components/MovieCard";
 import { useLocale } from "@/components/LocaleProvider";
 import { AgeStep } from "@/components/wizard/AgeStep";
+import { AgeWarningModal } from "@/components/wizard/AgeWarningModal";
 import { CompanyStep } from "@/components/wizard/CompanyStep";
 import { GenderStep } from "@/components/wizard/GenderStep";
 import { LocationStep } from "@/components/wizard/LocationStep";
 import { MoodStep } from "@/components/wizard/MoodStep";
 import { StoryStep } from "@/components/wizard/StoryStep";
 import { WatchTimeStep } from "@/components/wizard/WatchTimeStep";
+import { isAgeInappropriate } from "@/lib/ageCheck";
 import { getWatchedMovies, getWatchedTitles } from "@/lib/watchedMovies";
 import type {
   Company,
@@ -63,6 +65,7 @@ export function Wizard() {
   const [movieIndex, setMovieIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAgeWarning, setShowAgeWarning] = useState(false);
 
   // "new" = new picks tab, "watched" = previously watched tab
   const [resultsTab, setResultsTab] = useState<"new" | "watched">("new");
@@ -159,6 +162,12 @@ export function Wizard() {
       setRelevantWatched(json.relevantWatched ?? []);
       setWatchedIndex(0);
       setResultsTab("new");
+      
+      // Check if movies are age-inappropriate
+      if (isAgeInappropriate(data.age, json.movies, data.story, data.mood)) {
+        setShowAgeWarning(true);
+      }
+      
       goTo("results", "forward");
     } catch (err) {
       setError(err instanceof Error ? err.message : t.somethingWrong);
@@ -175,6 +184,7 @@ export function Wizard() {
     setWatchedIndex(0);
     setResultsTab("new");
     setError(null);
+    setShowAgeWarning(false);
     setDirection("back");
     setAnimKey((k) => k + 1);
     setStep("gender");
@@ -220,7 +230,7 @@ export function Wizard() {
         ) : null}
       </header>
 
-      <main className="wizard-main">
+      <main className={`wizard-main ${showAgeWarning ? "blurred-content" : ""}`}>
         {step !== "results" ? (
           <div
             key={`${step}-${animKey}`}
@@ -395,6 +405,13 @@ export function Wizard() {
 
         {error ? <p className="error-banner">{error}</p> : null}
       </main>
+
+      {showAgeWarning && (
+        <AgeWarningModal
+          onContinue={() => setShowAgeWarning(false)}
+          onGoBack={restart}
+        />
+      )}
     </div>
   );
 }
