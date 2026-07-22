@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { NaraRouterError, suggestMovies, filterRelevantWatched } from "@/lib/nararouter";
+import { NaraRouterError, filterRelevantWatched } from "@/lib/nararouter";
 import { enrichMovies } from "@/lib/tmdb";
+import { RecommendationAlgorithm } from "@/lib/algorithm/RecommendationAlgorithm";
 import type {
   CandidateWatchedMovie,
   Company,
@@ -124,9 +125,9 @@ export async function POST(request: Request) {
           : [],
       }));
 
-    // Run suggest + watched-filter in parallel
+    // Run algorithm + watched-filter in parallel
     const [movies, relevantTitles] = await Promise.all([
-      suggestMovies(payload),
+      RecommendationAlgorithm.execute(payload),
       filterRelevantWatched(payload, candidateWatched),
     ]);
 
