@@ -18,6 +18,8 @@ export type Company =
   | "partner"
   | "colleagues";
 
+export type Weather = "sunny" | "cloudy" | "rainy" | "snowy";
+
 export interface WizardData {
   gender: Gender | null;
   age: number | null;
@@ -26,6 +28,7 @@ export interface WizardData {
   latitude: number | null;
   longitude: number | null;
   locationLabel: string;
+  weather: Weather | null;
   mood: Mood | null;
   story: string;
   watchTime: WatchTime | null;
@@ -40,6 +43,7 @@ export interface RecommendRequest {
   locationLabel?: string;
   latitude?: number | null;
   longitude?: number | null;
+  weather: Weather;
   mood: Mood;
   story?: string;
   watchTime: WatchTime;

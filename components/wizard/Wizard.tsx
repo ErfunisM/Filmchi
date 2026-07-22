@@ -13,6 +13,7 @@ import { LocationStep } from "@/components/wizard/LocationStep";
 import { MoodStep } from "@/components/wizard/MoodStep";
 import { StoryStep } from "@/components/wizard/StoryStep";
 import { WatchTimeStep } from "@/components/wizard/WatchTimeStep";
+import { WeatherStep } from "@/components/wizard/WeatherStep";
 import { isAgeInappropriate } from "@/lib/ageCheck";
 import { getWatchedMovies, getWatchedTitles } from "@/lib/watchedMovies";
 import type {
@@ -22,6 +23,7 @@ import type {
   RecommendResponse,
   SuggestedMovie,
   WatchTime,
+  Weather,
   WizardData,
 } from "@/lib/types";
 
@@ -33,6 +35,7 @@ const INITIAL_DATA: WizardData = {
   latitude: null,
   longitude: null,
   locationLabel: "",
+  weather: null,
   mood: null,
   story: "",
   watchTime: null,
@@ -43,16 +46,17 @@ type Step =
   | "gender"
   | "age"
   | "location"
-  | "mood"
-  | "story"
+  | "weather"
   | "watchTime"
   | "company"
+  | "mood"
+  | "story"
   | "results";
 
 type Direction = "forward" | "back";
 
 function buildStepPath(): Step[] {
-  return ["gender", "age", "location", "mood", "story", "watchTime", "company"];
+  return ["gender", "age", "location", "weather", "watchTime", "company", "mood", "story"];
 }
 
 export function Wizard() {
@@ -110,6 +114,7 @@ export function Wizard() {
   async function submitRecommendations() {
     if (
       !data.gender ||
+      !data.weather ||
       !data.mood ||
       !data.watchTime ||
       !data.company ||
@@ -135,6 +140,7 @@ export function Wizard() {
           locationLabel: data.locationLabel || undefined,
           latitude: data.latitude,
           longitude: data.longitude,
+          weather: data.weather,
           mood: data.mood,
           story: data.story,
           watchTime: data.watchTime,
@@ -208,10 +214,11 @@ export function Wizard() {
   const ageValid = data.age !== null && data.age >= 1 && data.age <= 120;
   const showAgeNext = step === "age";
   const showStoryActions = step === "story";
-  const showFinish = step === "company";
+  const showCompanyNext = step === "company";
+  const showMoodNext = step === "mood";
   const showNav =
     step !== "results" &&
-    (showPrev || showAgeNext || showStoryActions || showFinish);
+    (showPrev || showAgeNext || showStoryActions || showCompanyNext || showMoodNext);
 
   return (
     <div className="wizard-shell" data-dir={dir}>
@@ -258,6 +265,13 @@ export function Wizard() {
                 data={data}
                 onChange={patchData}
                 onDone={() => goNext("location")}
+              />
+            ) : null}
+
+            {step === "weather" ? (
+              <WeatherStep
+                data={data}
+                onSelect={(weather: Weather) => goNext("weather", { weather })}
               />
             ) : null}
 
@@ -371,9 +385,10 @@ export function Wizard() {
                   <button
                     type="button"
                     className="primary-btn"
-                    onClick={() => goNext("story")}
+                    onClick={submitRecommendations}
+                    disabled={loading}
                   >
-                    {t.continue}
+                    {loading ? t.findingFilms : t.finish}
                   </button>
                 </>
               ) : null}
@@ -389,14 +404,25 @@ export function Wizard() {
                 </button>
               ) : null}
 
-              {showFinish ? (
+              {showCompanyNext ? (
                 <button
                   type="button"
                   className="primary-btn"
-                  disabled={!data.company || loading}
-                  onClick={submitRecommendations}
+                  disabled={!data.company}
+                  onClick={() => goNext("company", { company: data.company })}
                 >
-                  {loading ? t.findingFilms : t.finish}
+                  {t.continue}
+                </button>
+              ) : null}
+
+              {showMoodNext ? (
+                <button
+                  type="button"
+                  className="primary-btn"
+                  disabled={!data.mood}
+                  onClick={() => goNext("mood", { mood: data.mood })}
+                >
+                  {t.continue}
                 </button>
               ) : null}
             </div>

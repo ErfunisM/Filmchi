@@ -33,6 +33,12 @@ export type Dictionary = {
   locationSub: string;
   countrySub: string;
   citySub: string;
+  weather: string;
+  weatherSub: string;
+  sunny: string;
+  cloudy: string;
+  rainy: string;
+  snowy: string;
   howFeeling: string;
   howFeelingSub: string;
   happy: string;
@@ -122,6 +128,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
     locationSub: "یکی را انتخاب کن",
     countrySub: "کشورت را انتخاب کن",
     citySub: "شهرت را انتخاب کن",
+    weather: "آب و هوا",
+    weatherSub: "هوای الان چطوره؟",
+    sunny: "صاف",
+    cloudy: "ابری",
+    rainy: "بارانی",
+    snowy: "برفی",
     howFeeling: "حالت چطوره؟",
     howFeelingSub: "حال‌وهوایی که الان داری را انتخاب کن.",
     happy: "شاد",
@@ -237,6 +249,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
     locationSub: "Pick one",
     countrySub: "Pick your country",
     citySub: "Pick your city",
+    weather: "Weather",
+    weatherSub: "What's the weather like?",
+    sunny: "Sunny",
+    cloudy: "Cloudy",
+    rainy: "Rainy",
+    snowy: "Snowy",
     howFeeling: "How are you feeling?",
     howFeelingSub: "Pick the mood that fits right now.",
     happy: "Happy",

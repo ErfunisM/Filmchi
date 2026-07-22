@@ -8,6 +8,7 @@ import type {
   Mood,
   RecommendRequest,
   WatchTime,
+  Weather,
 } from "@/lib/types";
 
 const GENDERS: Gender[] = [
@@ -33,6 +34,7 @@ const COMPANIES: Company[] = [
   "partner",
   "colleagues",
 ];
+const WEATHERS: Weather[] = ["sunny", "cloudy", "rainy", "snowy"];
 
 function isOneOf<T extends string>(value: unknown, list: T[]): value is T {
   return typeof value === "string" && list.includes(value as T);
@@ -55,6 +57,7 @@ function parseBody(body: unknown): RecommendRequest {
     throw new Error("Age must be a number between 1 and 120");
   }
   if (!isOneOf(data.mood, MOODS)) throw new Error("Invalid mood");
+  if (data.weather && !isOneOf(data.weather, WEATHERS)) throw new Error("Invalid weather");
   if (!isOneOf(data.watchTime, WATCH_TIMES)) {
     throw new Error("Invalid watch time");
   }
@@ -80,6 +83,7 @@ function parseBody(body: unknown): RecommendRequest {
     locationLabel,
     latitude: typeof data.latitude === "number" ? data.latitude : null,
     longitude: typeof data.longitude === "number" ? data.longitude : null,
+    weather: (data.weather && isOneOf(data.weather, WEATHERS)) ? data.weather : "sunny",
     mood: data.mood,
     story: typeof data.story === "string" ? data.story : "",
     watchTime: data.watchTime,
