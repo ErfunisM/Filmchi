@@ -17,7 +17,6 @@ export function CompanyStep({ data, onSelect, loading }: CompanyStepProps) {
     { value: "family", label: t.family },
     { value: "friends", label: t.friends },
     { value: "partner", label: t.partner },
-    { value: "colleagues", label: t.colleagues },
   ];
 
   return (

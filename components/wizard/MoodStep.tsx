@@ -17,8 +17,6 @@ export function MoodStep({ data, onSelect }: MoodStepProps) {
     { value: "romantic", emoji: "🥰", label: t.romantic },
     { value: "thrill", emoji: "😱", label: t.thrill },
     { value: "chill", emoji: "😌", label: t.chill },
-    { value: "adventurous", emoji: "🚀", label: t.adventurous },
-    { value: "nostalgic", emoji: "🎞️", label: t.nostalgic },
   ];
 
   return (

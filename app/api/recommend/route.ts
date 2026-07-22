@@ -23,8 +23,6 @@ const MOODS: Mood[] = [
   "romantic",
   "thrill",
   "chill",
-  "adventurous",
-  "nostalgic",
 ];
 const WATCH_TIMES: WatchTime[] = ["morning", "afternoon", "night"];
 const COMPANIES: Company[] = [
@@ -32,7 +30,6 @@ const COMPANIES: Company[] = [
   "family",
   "friends",
   "partner",
-  "colleagues",
 ];
 const WEATHERS: Weather[] = ["sunny", "cloudy", "rainy", "snowy"];
 

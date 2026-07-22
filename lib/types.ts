@@ -5,9 +5,7 @@ export type Mood =
   | "sad"
   | "romantic"
   | "thrill"
-  | "chill"
-  | "adventurous"
-  | "nostalgic";
+  | "chill";
 
 export type WatchTime = "morning" | "afternoon" | "night";
 
@@ -15,8 +13,7 @@ export type Company =
   | "alone"
   | "family"
   | "friends"
-  | "partner"
-  | "colleagues";
+  | "partner";
 
 export type Weather = "sunny" | "cloudy" | "rainy" | "snowy";
 
