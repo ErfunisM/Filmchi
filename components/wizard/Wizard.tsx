@@ -214,11 +214,10 @@ export function Wizard() {
   const ageValid = data.age !== null && data.age >= 1 && data.age <= 120;
   const showAgeNext = step === "age";
   const showStoryActions = step === "story";
-  const showCompanyNext = step === "company";
   const showMoodNext = step === "mood";
   const showNav =
     step !== "results" &&
-    (showPrev || showAgeNext || showStoryActions || showCompanyNext || showMoodNext);
+    (showPrev || showAgeNext || showStoryActions || showMoodNext);
 
   return (
     <div className="wizard-shell" data-dir={dir}>
@@ -301,7 +300,7 @@ export function Wizard() {
             {step === "company" ? (
               <CompanyStep
                 data={data}
-                onSelect={(company: Company) => patchData({ company })}
+                onSelect={(company: Company) => goNext("company", { company })}
                 loading={loading}
               />
             ) : null}
@@ -378,7 +377,11 @@ export function Wizard() {
                   <button
                     type="button"
                     className="ghost-btn"
-                    onClick={() => goNext("story", { story: "" })}
+                    onClick={() => {
+                      patchData({ story: "" });
+                      submitRecommendations();
+                    }}
+                    disabled={loading}
                   >
                     {t.skip}
                   </button>
@@ -399,17 +402,6 @@ export function Wizard() {
                   className="primary-btn"
                   disabled={!ageValid}
                   onClick={() => goNext("age")}
-                >
-                  {t.continue}
-                </button>
-              ) : null}
-
-              {showCompanyNext ? (
-                <button
-                  type="button"
-                  className="primary-btn"
-                  disabled={!data.company}
-                  onClick={() => goNext("company", { company: data.company })}
                 >
                   {t.continue}
                 </button>
